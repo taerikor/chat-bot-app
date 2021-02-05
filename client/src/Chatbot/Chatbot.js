@@ -3,10 +3,12 @@ import Axios from 'axios';
 import { useDispatch, useSelector } from 'react-redux';
 import { saveMessage } from '../_actions/message_actions';
 import Message from './Sections/Message';
-import { List, Icon, Avatar } from 'antd';
+import { List, Icon, Avatar, message } from 'antd';
 import Card from "./Sections/Card";
 
 function Chatbot() {
+    const dispatch = useDispatch();
+    const getMessage = useSelector(state => state.message.messages)
 
     useEffect(()=>{
 
@@ -23,19 +25,21 @@ function Chatbot() {
                 }
             }
         }
-        console.log(conversation)
+        dispatch(saveMessage(conversation))
         const textQueryVariable = {
             text
         }
 
         try {
            const response = await Axios.post('/api/dialogFlow/textQuery',textQueryVariable)
-           const content = response.data.fulfillmentMessages[0]
-           conversation = {
-               who: 'bot',
-               content:content
-           }
-           console.log(conversation)
+          for(let content of response.data.fulfillmentMessages){
+              conversation = {
+                  who: 'bot',
+                  content:content
+              }
+              dispatch(saveMessage(conversation))
+          }
+
 
         }catch (error){
             conversation = {
@@ -46,7 +50,7 @@ function Chatbot() {
                     }
                 }
             }
-            console.log(conversation)
+            dispatch(saveMessage(conversation))
         }
     }
     const eventQuery = async (event) => {
@@ -57,12 +61,13 @@ function Chatbot() {
 
         try {
            const response = await Axios.post('/api/dialogFlow/eventQuery',eventQueryVariable)
-           const content = response.data.fulfillmentMessages[0]
-           let conversation = {
-               who: 'bot',
-               content:content
-           }
-           console.log(conversation)
+           for(let content of response.data.fulfillmentMessages){
+            let conversation = {
+                who: 'bot',
+                content:content
+            }
+            dispatch(saveMessage(conversation))
+        }
 
         }catch (error){
            let conversation = {
@@ -73,7 +78,7 @@ function Chatbot() {
                     }
                 }
             }
-            console.log(conversation)
+            dispatch(saveMessage(conversation))
         }
     }
 
@@ -89,6 +94,42 @@ function Chatbot() {
      
     }
 
+    const renderCards = (cards) => {
+        return cards.map((card,i) => <Card key={i} cardInfo={card.structValue} />)
+    }
+
+    const renderMessage = (message,i) => {
+        if(message.content && message.content.text && message.content.text.text){
+            console.log(message.content.text.text !== "")
+            return   <Message key={i} who={message.who} text={message.content.text.text} />
+        }else if(message.content && message.content.payload.fields.card){
+            const AvatarSrc = message.who === 'bot' ? <Icon type="robot" /> : <Icon type="smile" />
+
+            return <div key={i}>
+                <List.Item  style={{ padding: '1rem' }}>
+                    <List.Item.Meta
+                        avatar={<Avatar icon={AvatarSrc} />}
+                        title={message.who}
+                        description={renderCards(message.content.payload.fields.card.listValue.values)}
+                    />
+                </List.Item>
+            </div>
+
+        }else if(message.content.text.text === [""]){
+           return null
+        }
+    }
+
+    const renderMessages = (messages) => {
+        if(messages){
+           return messages.map((message,i)=>{
+              return  renderMessage(message,i)
+            })
+        }else{
+            return null
+        }
+    }
+
     return (
         <div style={{
             height: 700, width: 700,
@@ -96,7 +137,7 @@ function Chatbot() {
         }}>
             <div style={{ height: 644, width: '100%', overflow: 'auto' }}>
 
-
+            {renderMessages(getMessage)}
 
 
             </div>

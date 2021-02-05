@@ -1,1 +1,1 @@
-export const SAVE_MESSAGE = 'save_message';
+export const SAVE_MESSAGE = 'save_message'
